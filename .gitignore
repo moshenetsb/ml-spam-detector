@@ -1,10 +1,6 @@
-data/data_processed.csv
-data/class_distribution.png
-data/tfidf_vectorizer.pkl
-data/vectorized_data.pkl
-*.pkl
-*.png
-*.csv
+data/*
+!data/data_raw
+!data/readme.md
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
