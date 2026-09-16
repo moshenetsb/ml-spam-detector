@@ -1,7 +1,7 @@
 from preprocessing import preprocess_data
 from pathlib import Path
 from vectorization import vectorize_data
-# from training import train_models
+from training import train_models
 
 
 def main():
@@ -15,8 +15,8 @@ def main():
     print("\n[2/3] Wektoryzacja")
     vectorize_data(data_folder_path)
 
-    # print("\n[3/3] Trenowanie modeli")
-    # train_models()
+    print("\n[3/3] Trenowanie modeli (wybór najlepszego)")
+    train_models(data_folder_path)
 
     print("\n=== Zakończono ===")
 

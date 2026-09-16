@@ -21,6 +21,8 @@ def preprocess_data(base_path=Path(__file__).resolve().parent.parent / 'data') -
     spam_df = spam_df.dropna(subset=["text", "label"])
     spam_df = spam_df.drop_duplicates()
 
+    spam_df["label"] = spam_df.label.map({'spam': 1, "ham": 0})
+
     output_path.parent.mkdir(parents=True, exist_ok=True)
     spam_df.to_csv(output_path, index=False)
 
