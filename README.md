@@ -1,30 +1,63 @@
 # Detektor Spamu (ML Spam Detector)
 
-## O projekcie
-Projekt ma na celu stworzenie modelu uczenia maszynowego do klasyfikacji wiadomości jako spam lub nie spam. (w trakcie robienia będziemy kminić co i jak)
+> Projekt ma na celu stworzenie modelu uczenia maszynowego do klasyfikacji wiadomości jako spam lub nie spam
 
 ## Zbiory danych
-Zbiór danych zostanie wybrany z poniższych propozycji dostępnych na platformie Kaggle:
-* **SMS Spam Collection (UCI)** — około 5,5 tys. wiadomości SMS (spam/ham). Zbiór mały i czysty, **rekomendowany na start**.
-* **Enron-Spam** — około 33 tys. maili. Zbiór większy, posiadający bardziej realistyczny rozkład.
-* **SpamAssassin Public Corpus** — maile z pełnymi nagłówkami. Użyteczny, jeśli planowana jest ekstrakcja cech z metadanych wiadomości (nie tylko z samego tekstu).
 
-## Podział prac (Pipeline)
-Prace nad projektem podzielone są według etapów 
+Do przeprowadzenia analizy oraz trenowania modeli w ramach projektu eksperymentalnego wybraliśmy **SMS Spam Collection (UCI)**. Zbiór liczy około 5,5 tys. wiadomości SMS (oznaczonych jako spam lub ham).
+
+## Jak uruchomić projekt
+
+1. **Sklonuj repozytorium:**
+
+   ```bash
+   git clone https://github.com/moshenetsb/ml-spam-detector.git
+   cd ml-spam-detector
+   ```
+
+2. **Utwórz i aktywuj wirtualne środowisko:**
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   ```
+
+3. **Zainstaluj wymagane zależności:**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Przygotuj dane i wytrenuj model:**
+
+   ```bash
+   python src/main.py
+   ```
+
+5. **Uruchom aplikację konsolową:**
+
+   ```bash
+   python src/app.py
+   ```
+
+## Podział pracy
+
+Prace nad projektem podzielone są według etapów
 
 ### 1. Preprocessing danych
+
 **Odpowiedzialność:** Janulo
 
-
 ### 2. Wektoryzacja (TF-IDF)
+
 **Odpowiedzialność:** higar
 
-
 ### 3. Wybór modelu
-**Odpowiedzialność:** Bohdan
 
+**Odpowiedzialność:** [@moshenetsb](https://github.com/moshenetsb)
 
 ### 4. Ewaluacja i interpretacja
-**Odpowiedzialność:** ???
+
+**Odpowiedzialność:** [@shang1410](https://github.com/shang1410)
 
 ### Koordynatorka: Aleksandra
