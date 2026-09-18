@@ -40,6 +40,12 @@ Do przeprowadzenia analizy oraz trenowania modeli w ramach projektu eksperymenta
    python src/app.py
    ```
 
+6. **Uruchom aplikację graficzną:**
+
+   ```bash
+   python src/gui.py
+   ```
+
 ## Podział pracy
 
 Prace nad projektem podzielone są według etapów

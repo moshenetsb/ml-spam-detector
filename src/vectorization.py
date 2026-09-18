@@ -14,6 +14,9 @@ def vectorize_data(base_path=Path(__file__).resolve().parent.parent / "data") ->
     data_path = base_path / "data_processed.csv"
     output_dir = base_path / "vectorized"
 
+    if not data_path.exists():
+            raise FileNotFoundError(f"Preprocessed file not found: {data_path}")
+
     output_dir.mkdir(parents=True, exist_ok=True)
 
     df = pd.read_csv(data_path)

@@ -11,6 +11,9 @@ def preprocess_data(base_path=Path(__file__).resolve().parent.parent / 'data') -
     data_path = base_path / "data_raw"
     output_path = base_path / "data_processed.csv"
 
+    if not data_path.exists():
+        raise FileNotFoundError(f"File not found: {data_path}")
+
     spam_df = pd.read_csv(
         data_path,
         sep="\t",
