@@ -37,15 +37,15 @@ Do przeprowadzenia analizy oraz trenowania modeli w ramach projektu eksperymenta
 5. **Uruchom aplikację:**
    - Wersja z interfejsem graficznym:
 
-   ```bash
-   python src/gui.py
-   ```
+     ```bash
+     python src/gui.py
+     ```
 
    - Wersja konsolowa:
 
-   ```bash
-   python src/app.py
-   ```
+     ```bash
+     python src/app.py
+     ```
 
 ## Podział pracy
 
