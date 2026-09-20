@@ -10,18 +10,16 @@ def main():
 
     print("=== Spam Detector ===")
 
-    print("\n[1/3] Preprocessing")
-    preprocess_data(data_folder_path)
+    stages = [
+        ("Preprocessing", preprocess_data),
+        ("Wektoryzacja", vectorize_data),
+        ("Trenowanie modeli (wybór najlepszego)", train_models),
+        ("Ewaluacja i interpretacja", evaluate_model),
+    ]
 
-    print("\n[2/3] Wektoryzacja")
-    vectorize_data(data_folder_path)
-
-    print("\n[3/3] Trenowanie modeli (wybór najlepszego)")
-    train_models(data_folder_path)
-
-    print("\n[4/4] Ewaluacja i interpretacja")
-    evaluate_model(data_folder_path)
-
+    for i, (name, function) in enumerate(stages, start=1):
+        print(f"\n[{i}/{len(stages)}] {name}")
+        function(data_folder_path)
 
     print("\n=== Zakończono ===")
 
