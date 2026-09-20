@@ -34,16 +34,17 @@ Do przeprowadzenia analizy oraz trenowania modeli w ramach projektu eksperymenta
    python src/main.py
    ```
 
-5. **Uruchom aplikację konsolową:**
-
-   ```bash
-   python src/app.py
-   ```
-
-6. **Uruchom aplikację graficzną:**
+5. **Uruchom aplikację:**
+   - Wersja z interfejsem graficznym:
 
    ```bash
    python src/gui.py
+   ```
+
+   - Wersja konsolowa:
+
+   ```bash
+   python src/app.py
    ```
 
 ## Podział pracy
