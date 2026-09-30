@@ -16,9 +16,9 @@ def plot_distribution(df, feature):
 
 def plot_message_length(df):
     """Show the distribution of message lengths for ham and spam."""
-    
+
     plt.figure(figsize=(10, 5))
-    
+
     plt.hist(
         df.loc[df["label"] == "ham", "message_length"],
         bins=40,
@@ -32,7 +32,7 @@ def plot_message_length(df):
         alpha=0.6,
         label="spam",
     )
-    
+
     plt.xlabel("Message length (characters)")
     plt.ylabel("Number of messages")
     plt.title("Distribution of message lengths")
