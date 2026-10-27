@@ -35,7 +35,7 @@ def plot_message_length(df):
 
     plt.xlabel("Message length (characters)")
     plt.ylabel("Number of messages")
-    plt.title("Distribution of message lengths")
+    plt.title("Distribution of message lengths depending on class")
     plt.legend()
     plt.show()
 
