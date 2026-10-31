@@ -1,6 +1,9 @@
-from pathlib import Path
-import pandas as pd
 import csv
+from pathlib import Path
+
+import pandas as pd
+
+from paths import APPLICATION_PATH, RAW_DATA_PATH
 
 
 def load_raw_data(data_path: Path) -> pd.DataFrame:
@@ -24,20 +27,22 @@ def save_processed_data(df: pd.DataFrame, output_path: Path) -> None:
 
 
 def clean_dataset(df: pd.DataFrame) -> pd.DataFrame:
-    """Cleans the dataset by removing missing values and duplicates, and mapping labels to binary values."""
+    """Removes missing/blank texts, invalid labels and duplicates, then maps labels to binary values."""
     df = df.dropna(subset=["text", "label"])
-    df = df.drop_duplicates()
+    df = df.loc[
+        df["label"].isin(["ham", "spam"])
+        & df["text"].str.strip().str.len().gt(0)
+    ].drop_duplicates().copy()
     df["label"] = df["label"].map({'spam': 1, "ham": 0})
     return df
 
 
-def preprocess_data(base_path=Path(__file__).resolve().parent.parent / 'data') -> pd.DataFrame:
+def preprocess_data(base_path=APPLICATION_PATH, data_path=RAW_DATA_PATH) -> pd.DataFrame:
     """
     Preprocesses the spam dataset by reading the raw data, removing missing values and duplicates,
     and saving the cleaned data to a CSV file
     """
 
-    data_path = base_path / "data_raw"
     output_path = base_path / "data_processed.csv"
 
     raw_spam_df = load_raw_data(data_path)
