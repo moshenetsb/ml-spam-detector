@@ -1,23 +1,26 @@
+import argparse
 import json
 from pathlib import Path
 
 import joblib
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    PrecisionRecallDisplay,
+    RocCurveDisplay,
     accuracy_score,
+    average_precision_score,
+    classification_report,
+    confusion_matrix,
+    f1_score,
     precision_score,
     recall_score,
-    f1_score,
     roc_auc_score,
-    average_precision_score,
-    confusion_matrix,
-    classification_report,
-    RocCurveDisplay,
-    PrecisionRecallDisplay,
-    ConfusionMatrixDisplay
 )
 from sklearn.model_selection import learning_curve
+
+from paths import APPLICATION_PATH
 
 LABELS = ["ham", "spam"]
 
@@ -114,7 +117,10 @@ def plot_precision_recall_curve(model, X, y, name=None, ax=None, save_path=None)
 def plot_top_features(model, vectorizer, top_n=15, save_path=None):
 
     feature_names = np.array(vectorizer.get_feature_names_out())
-    log_prob_diff = model.feature_log_prob_[1] - model.feature_log_prob_[0]  # spam - ham
+
+    # the text transformer comes first, any numeric features follow its columns
+    text_log_prob = model.feature_log_prob_[:, :len(feature_names)]
+    log_prob_diff = text_log_prob[1] - text_log_prob[0]  # spam - ham
 
     top_spam_idx = np.argsort(log_prob_diff)[-top_n:]
     top_ham_idx = np.argsort(log_prob_diff)[:top_n]
@@ -238,6 +244,7 @@ def plot_model_comparison(
     fig, ax = _get_fig_ax(ax, figsize=(1.5*8, max(4, 0.6 * len(names) + 1.5)))
 
     legend_handles, legend_labels = [], []
+    bar_containers = []
 
     if len(metrics) > 1:
         palette = ["#6C8EBF", "#A32C29", "#2B6B4F", "#97907E"]
@@ -245,8 +252,9 @@ def plot_model_comparison(
         for i, metric in enumerate(metrics):
             values = [r[metric] for r in results_sorted]
             offset = (i - (len(metrics) - 1) / 2) * height
-            ax.barh(y_pos + offset, values, height=height,
-                    label=metric.capitalize(), color=palette[i % len(palette)])
+            bars = ax.barh(y_pos + offset, values, height=height,
+                           label=metric.capitalize(), color=palette[i % len(palette)])
+            bar_containers.append(bars)
             
     else:
         metric = metrics[0]
@@ -254,30 +262,35 @@ def plot_model_comparison(
 
         if family_fn and family_colors:
             colors = [family_colors.get(family_fn(r["name"]), "#97907E") for r in results_sorted]
-            ax.barh(y_pos, values, color=colors)
+            bars = ax.barh(y_pos, values, color=colors)
+            bar_containers.append(bars)
             legend_handles = [plt.Rectangle((0, 0), 1, 1, color=c) for c in family_colors.values()]
             legend_labels = list(family_colors.keys())
 
         else:
-            ax.barh(y_pos, values, color="#A32C29")
+            bars = ax.barh(y_pos, values, color="#A32C29")
+            bar_containers.append(bars)
+
+    for bars in bar_containers:
+        ax.bar_label(bars, fmt="%.4f", padding=4, fontsize=8)
 
     if baseline_value is not None:
         ax.axvline(
-            baseline_value, color="black", linestyle="--", linewidth=1,
+            baseline_value, color="#2563EB", linestyle="--", linewidth=1,
             label=baseline_label or f"Baseline = {baseline_value:.3f}",
         )
 
     ax.set_yticks(y_pos, labels=names)
     ax.invert_yaxis()
-    ax.set_xlim(0, 1.02)
+    ax.set_xlim(0, 1.10)
     ax.set_xlabel("Wynik")
     ax.set_title(title)
 
+    line_handles, line_labels = ax.get_legend_handles_labels()
     if legend_handles:
-        line_handles, line_labels = ax.get_legend_handles_labels()
         ax.legend(legend_handles + line_handles, legend_labels + line_labels, loc="lower right", fontsize=8)
 
-    else:
+    elif line_handles:
         ax.legend(loc="lower right")
 
     fig.tight_layout()
@@ -289,7 +302,7 @@ def plot_model_comparison(
 
 
 
-def evaluate_model(base_path: Path = Path(__file__).resolve().parent.parent / "data") -> dict:
+def evaluate_model(base_path: Path = APPLICATION_PATH) -> dict:
 
     vectorized_dir = base_path / "vectorized"
     models_dir = base_path / "models"
@@ -301,8 +314,7 @@ def evaluate_model(base_path: Path = Path(__file__).resolve().parent.parent / "d
         raise FileNotFoundError(f"Model not found: {model_path}. Firstly run training.")
 
     model = joblib.load(model_path)
-    vectorizer = joblib.load(vectorized_dir / "tfidf_vectorizer.pkl")
-    X_train, X_test, y_train, y_test = joblib.load(vectorized_dir / "tfidf_splits.pkl")
+    X_train, X_test, y_train, y_test = joblib.load(vectorized_dir / "text_splits.pkl")
 
     y_pred = model.predict(X_test)
     scores = _get_scores(model, X_test)
@@ -319,16 +331,22 @@ def evaluate_model(base_path: Path = Path(__file__).resolve().parent.parent / "d
     print("\n  Classification report:")
     print(classification_report(y_test, y_pred, target_names=LABELS, zero_division=0))
 
-    model_name = type(model).__name__
+    classifier = model.named_steps["clf"]
+    vectorizer = model.named_steps["features"].named_transformers_["text"]
+    model_name = type(classifier).__name__
 
     plot_confusion_matrix(y_test, y_pred, save_path=output_dir / "confusion_matrix.png")
     plot_roc_curve(model, X_test, y_test, name=model_name, save_path=output_dir / "roc_curve.png")
     plot_precision_recall_curve(model, X_test, y_test, name=model_name, save_path=output_dir / "precision_recall_curve.png")
-    plot_learning_curve(model, X_train, y_train, save_path=output_dir / "learning_curve.png")
+    # Refit the vocabulary and IDF within each fold and training-size subset.
+    plot_learning_curve(
+        model, X_train, y_train,
+        save_path=output_dir / "learning_curve.png",
+    )
     plot_train_vs_test_metrics(model, X_train, y_train, X_test, y_test, save_path=output_dir / "train_vs_test.png")
 
-    if hasattr(model, "feature_log_prob_"):
-        plot_top_features(model, vectorizer, save_path=output_dir / "top_features.png")
+    if hasattr(classifier, "feature_log_prob_"):
+        plot_top_features(classifier, vectorizer, save_path=output_dir / "top_features.png")
 
     with open(output_dir / "metrics.json", "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2, ensure_ascii=False)
@@ -339,4 +357,6 @@ def evaluate_model(base_path: Path = Path(__file__).resolve().parent.parent / "d
 
 
 if __name__ == "__main__":
-    evaluate_model()
+    parser = argparse.ArgumentParser(description="Evaluate a raw-text spam pipeline")
+    parser.add_argument("--artifacts", type=Path, default=APPLICATION_PATH, help="Directory containing models/ and vectorized/")
+    evaluate_model(parser.parse_args().artifacts)

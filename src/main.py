@@ -1,19 +1,19 @@
-from preprocessing import preprocess_data
-from pathlib import Path
-from vectorization import vectorize_data
-from training import train_models
 from evaluation import evaluate_model
+from paths import APPLICATION_PATH
+from preprocessing import preprocess_data
+from training import train_models
+from vectorization import vectorize_data
 
 
 def main():
-    data_folder_path = Path(__file__).resolve().parent.parent / 'data'
+    data_folder_path = APPLICATION_PATH
 
     print("=== Spam Detector ===")
 
     stages = [
         ("Preprocessing", preprocess_data),
         ("Wektoryzacja", vectorize_data),
-        ("Trenowanie modeli (wybór najlepszego)", train_models),
+        ("Trenowanie modelu bazowego", train_models),
         ("Ewaluacja i interpretacja", evaluate_model),
     ]
 

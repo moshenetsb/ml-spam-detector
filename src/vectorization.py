@@ -1,21 +1,21 @@
-from pathlib import Path
-
 import joblib
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.model_selection import train_test_split
 
+from paths import APPLICATION_PATH
 
-def vectorize_data(base_path=Path(__file__).resolve().parent.parent / "data") -> None:
+
+def vectorize_data(base_path=APPLICATION_PATH) -> None:
     """
-    Vectorizes the preprocessed spam dataset using TF-IDF and saves the vectorizer and the train-test splits to disk
+    Saves the fitted TF-IDF vectorizer, vectorized splits and raw text splits for cross-validation.
     """
 
     data_path = base_path / "data_processed.csv"
     output_dir = base_path / "vectorized"
 
     if not data_path.exists():
-            raise FileNotFoundError(f"Preprocessed file not found: {data_path}")
+        raise FileNotFoundError(f"Preprocessed file not found: {data_path}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -42,6 +42,10 @@ def vectorize_data(base_path=Path(__file__).resolve().parent.parent / "data") ->
     joblib.dump(
         (X_train_tfidf, X_test_tfidf, y_train, y_test),
         output_dir / "tfidf_splits.pkl",
+    )
+    joblib.dump(
+        (X_train, X_test, y_train, y_test),
+        output_dir / "text_splits.pkl",
     )
 
 

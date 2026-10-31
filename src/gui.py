@@ -1,59 +1,11 @@
-import json
+import argparse
 from pathlib import Path
 
 import gradio as gr
-import joblib
 
-
-BASE_PATH = Path(__file__).resolve().parent.parent / "data"
-
-VECTORISER_PATH = BASE_PATH / "vectorized" / "tfidf_vectorizer.pkl"
-MODEL_PATH = BASE_PATH / "models" / "spam_classifier_model.pkl"
-HISTORY_PATH = BASE_PATH / "message_history.json"
+from app import load_app_assets
 
 MAX_HISTORY = 10
-
-def load_app_assets() -> tuple:
-
-    if not VECTORISER_PATH.exists() or not MODEL_PATH.exists():
-        raise FileNotFoundError(
-            "Trained model or vectorizer not found. Firstly, run main.py."
-        )
-
-    vectorizer = joblib.load(VECTORISER_PATH)
-    model = joblib.load(MODEL_PATH)
-
-    return vectorizer, model
-
-vectorizer, model = load_app_assets()
-
-
-
-def load_history() -> list[str]:
-    if not HISTORY_PATH.exists():
-        return []
-
-    try:
-        with open(HISTORY_PATH, "r", encoding="utf-8") as file:
-            history = json.load(file)
-
-        if not isinstance(history, list):
-            return []
-
-        return history[:MAX_HISTORY]
-
-    except (json.JSONDecodeError, OSError):
-        return []
-
-
-
-def save_history(history: list[str]) -> None:
-    HISTORY_PATH.parent.mkdir(parents=True, exist_ok=True)
-
-    with open(HISTORY_PATH, "w", encoding="utf-8") as file:
-        json.dump(history[:MAX_HISTORY], file, ensure_ascii=False, indent=4,)
-
-
 
 def update_history(history: list[str]):
     return gr.update(choices=history, value=None)
@@ -66,19 +18,7 @@ def add_to_history(message: str, history: list[str]) -> list[str]:
     if not message:
         return history
 
-    if message in history:
-        history.remove(message)
-
-    history.insert(0, message)
-    history = history[:MAX_HISTORY]
-
-    save_history(history)
-
-    return history
-
-
-
-INITIAL_HISTORY = load_history()
+    return [message] + [item for item in history if item != message][:MAX_HISTORY - 1]
 
 
 
@@ -91,17 +31,18 @@ EXAMPLES = [
 
 
 
-def classify_message(text: str, history: list[str]) -> tuple:
+def classify_message(text: str, history: list[str], model) -> tuple:
     if not text or not text.strip():
         return {}, history
 
-    text_tfidf = vectorizer.transform([text])
-    proba = model.predict_proba(text_tfidf)[0]
-
-    result = {
-            "SPAM": float(proba[1]),
-            "Normal message": float(proba[0]),
+    if hasattr(model, "predict_proba"):
+        proba = model.predict_proba([text])[0]
+        result = {
+            "SPAM" if label == 1 else "Normal message": float(probability)
+            for label, probability in zip(model.classes_, proba)
         }
+    else:
+        result = "SPAM" if model.predict([text])[0] == 1 else "Normal message"
 
     history = add_to_history(text, history)
 
@@ -109,54 +50,56 @@ def classify_message(text: str, history: list[str]) -> tuple:
 
 
 
-with gr.Blocks(title="Spam Detector", theme=gr.Theme.from_hub("YTheme/TehnoX")) as demo:
+def create_demo(model):
+    def classify(text, history):
+        return classify_message(text, history, model)
 
-    history_state = gr.State(INITIAL_HISTORY)
-    
-    gr.Markdown(
-        """
-        # Spam Detector
-        Bernoulli Naive Bayes model (TF-IDF, 3000 features) trained on dataset SMS Spam Collection.
-        Paste message below to check whether it is spam.
-        """
-    )
+    with gr.Blocks(title="Spam Detector") as demo:
+        history_state = gr.State([])
+        gr.Markdown(
+            "# Spam Detector\n"
+            "Model trained on SMS Spam Collection. "
+            "Paste a message below to check whether it is spam."
+        )
 
-    with gr.Row():
-        with gr.Column():
-            message_input = gr.Textbox(
-                label="Message content",
-                placeholder="Write or paste message...",
-                lines=6,
-            )
+        with gr.Row():
+            with gr.Column():
+                message_input = gr.Textbox(
+                    label="Message content",
+                    placeholder="Write or paste message...",
+                    lines=6,
+                )
+                submit_btn = gr.Button("Check", variant="primary")
+                history_dropdown = gr.Dropdown(
+                    label="Recent messages", choices=[], value=None, interactive=True,
+                )
+                gr.Examples(examples=EXAMPLES, inputs=message_input, label="Example messages")
 
-            submit_btn = gr.Button("Check", variant="primary")
+            with gr.Column():
+                output_label = gr.Label(label="Classification result", num_top_classes=2)
 
-            history_dropdown = gr.Dropdown(
-                label="Recent messages",
-                choices=INITIAL_HISTORY,
-                value=None,
-                interactive=True,
-            )
+        history_dropdown.select(
+            fn=lambda message: message or "",
+            inputs=history_dropdown,
+            outputs=message_input,
+        )
+        for event in (submit_btn.click, message_input.submit):
+            event(
+                fn=classify,
+                inputs=[message_input, history_state],
+                outputs=[output_label, history_state],
+            ).then(fn=update_history, inputs=history_state, outputs=history_dropdown)
 
-            gr.Examples(examples=EXAMPLES, inputs=message_input, label="Example messages")
+    return demo
 
-        with gr.Column():
-            output_label = gr.Label(label="Classification score", num_top_classes=2)
 
-    submit_btn.click(fn=classify_message, 
-                     inputs=[message_input, history_state], 
-                     outputs=[output_label, history_state]).then(
-                        fn=update_history,
-                        inputs=history_state,
-                        outputs=history_dropdown)
-    
-    message_input.submit(fn=classify_message, 
-                         inputs=[message_input, history_state], 
-                         outputs=[output_label, history_state]).then(
-                             fn=update_history,
-                             inputs=history_state,
-                             outputs=history_dropdown)
+def main():
+    parser = argparse.ArgumentParser(description="Spam detector (Gradio)")
+    parser.add_argument("--model", type=Path, help="Path to a trained raw-text pipeline")
+    model = load_app_assets(model_path=parser.parse_args().model)
+    demo = create_demo(model)
+    demo.launch(share=True, theme=gr.Theme.from_hub("YTheme/TehnoX"))
 
 
 if __name__ == "__main__":
-    demo.launch(share=True)
+    main()
